@@ -322,7 +322,7 @@ namespace rnd {
     u32 startingDungeonReward;
     u32 startingEquipment;
     u32 startingUpgrades;
-    game::PlayerData::OwlStatues startingOwlStatues;
+    //u16 startingOwlStatues;
 
     // ARM Patch Checks
     u8 enableFastZoraSwim = 1;
