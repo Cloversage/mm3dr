@@ -121,7 +121,7 @@ SECTIONS{
 		*(.patch_ItemCloseOnSelect)
 	}
 
-	// Tail end of the song of time warp sequence
+	/* Tail end of the song of time warp sequence */
 	.patch_SongOfTimeHook 0x3A8EF0 : {
 		*(.patch_SongOfTimeHook)
 	}
