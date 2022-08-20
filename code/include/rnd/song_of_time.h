@@ -3,8 +3,6 @@
 
 #include "game/common_data.h"
 
-namespace rnd {
+namespace rnd {}
 
-}
-
-#endif //_SONG_OF_TIME_H_
+#endif  //_SONG_OF_TIME_H_
