@@ -121,6 +121,15 @@ SECTIONS{
 		*(.patch_ItemCloseOnSelect)
 	}
 
+	// Tail end of the song of time warp sequence
+	.patch_SongOfTimeHook 0x3A8EF0 : {
+		*(.patch_SongOfTimeHook)
+	}
+	/*
+	.patch_SongOfSoaringSkip 0x326EF0 : {
+		*(.patch_SongOfSoaringSkip)
+	}
+	*/
 	.patch_HandleOcarinaHooks 0x604D8C : {
 		*(.patch_HandleOcarinaHooks)
 	}

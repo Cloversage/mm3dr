@@ -128,13 +128,7 @@ namespace rnd {
       gSettingsContext.startingOcarina = 1;
 
       SaveFile_SetStartingInventory();
-
-      // These events replay after song of time
-      saveData.ct_guard_allows_through_if_0x20 = 0x20;
-      saveData.tatl_dialogue_snowhead_entry_0x08 = 0x08;
-      saveData.pirate_leader_dialogue_0x20 = 0x20;
-      saveData.temp_event_flag_bundle1.ct_deku_in_flower_if_present = 1;
-      saveData.skip_tingle_intro_dialogue_0x01 = 0x01;
+      SaveFile_SetUnconditionalTempEventFlags();
 
       saveData.player_form = game::act::Player::Form::Human;
       game::GiveItem(game::ItemId::BombersNotebook);
@@ -216,6 +210,15 @@ namespace rnd {
     saveData.set_fast_animation_flags.greatbay_temple_opened_at_least_once = 1;
     // Misc
     saveData.set_fast_animation_flags.deku_flown_in_at_least_once = 1;
+  }
+  void SaveFile_SetUnconditionalTempEventFlags() {
+    // These event flags can be safely reset after a song of time warp
+    game::SaveData& saveData = game::GetCommonData().save;
+    saveData.ct_guard_allows_through_if_0x20 = 0x20;
+    saveData.tatl_dialogue_snowhead_entry_0x08 = 0x08;
+    saveData.pirate_leader_dialogue_0x20 = 0x20;
+    saveData.temp_event_flag_bundle1.ct_deku_in_flower_if_present = 1;
+    saveData.skip_tingle_intro_dialogue_0x01 = 0x01;
   }
   void SaveFile_SetStartingOwlStatues() {
     game::SaveData& saveData = game::GetCommonData().save;

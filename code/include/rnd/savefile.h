@@ -7,6 +7,7 @@
 namespace rnd {
   void SaveFile_SkipMinorCutscenes();
   void SaveFile_SetFastAnimationFlags();
+  void SaveFile_SetUnconditionalTempEventFlags();
   void SaveFile_SetStartingOwlStatues();
   void SaveFile_SetComfortOptions();
   void SaveFile_FillOverWorldMapData();

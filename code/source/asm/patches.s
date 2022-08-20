@@ -132,6 +132,18 @@ patch_FasterBlockMovement:
 patch_FasterBlockMovementBack:
     .float 60.0
 
+.section .patch_SongOfTimeHook
+.global patch_SongOfTimeHook
+patch_SongOfTimeHook:
+    b hook_SongOfTimeHook
+
+@.section .patch_SongOfSoaringSkip
+@.global patch_SongOfSoaringSkip
+@patch_SongOfSoaringSkip:
+    @ Removes owl actor from scene which stops the cutscene from occurring
+    @og instruction: ldr r0, [r0,#0x1f8]
+    @mov r0, #0x00008000
+
 .section .patch_loader
 .global loader_patch
 loader_patch:

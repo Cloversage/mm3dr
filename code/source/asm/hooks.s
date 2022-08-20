@@ -157,6 +157,14 @@ hook_HandleOcarina:
     cmp r0, #0x16 @ original instruction
     b 0x604d90
 
+.global hook_SongOfTimeHook
+hook_SongOfTimeHook:
+    push {r0-r12, lr}
+    bl SongOfTime
+    pop {r0-r12, lr}
+    mov r2, #0x390 @ original instruction
+    bl 0x3A8EF4
+
 .section .loader
 .global hook_into_loader
 hook_into_loader:
