@@ -8,10 +8,12 @@
 #include "game/ui.h"
 #include "rnd/extdata.h"
 #include "rnd/icetrap.h"
+#include "rnd/input.h"
 #include "rnd/item_override.h"
 #include "rnd/link.h"
 #include "rnd/rheap.h"
 #include "rnd/savefile.h"
+#include "rnd/settings.h"
 #include "z3d/z3DVec.h"
 
 #if defined ENABLE_DEBUG || defined DEBUG_PRINT
@@ -44,6 +46,9 @@ namespace rnd {
   char* fake_heap_end;
   extern void (*__init_array_start[])(void) __attribute__((weak));
   extern void (*__init_array_end[])(void) __attribute__((weak));
+#if defined ENABLE_DEBUG || defined DEBUG_PRINT
+  static bool titlePlayed = false;
+#endif
   void calc(game::State* state) {
     Context& context = GetContext();
     context.gctx = nullptr;
@@ -52,63 +57,70 @@ namespace rnd {
       Init(context);
     }
 
+#if defined ENABLE_DEBUG || defined DEBUG_PRINT
+    if (state->type == game::StateType::FileSelect) {
+      if (!titlePlayed) {
+        game::sound::ControlStream(game::sound::StreamPlayer::DEFAULT_PLAYER, 1, 1);
+        game::sound::PlayStream(game::sound::StreamId::NA_BGM_MUJURA_2, game::sound::StreamPlayer::DEFAULT_PLAYER);
+        titlePlayed = true;
+      }
+
+      return;
+    } else if (state->type != game::StateType::Play)
+      return;
+#else
     if (state->type != game::StateType::Play)
       return;
+#endif
+
     context.gctx = static_cast<game::GlobalContext*>(state);
-
-    if (context.gctx->GetPlayerActor())
+    Input_Update();
+    if (context.gctx->GetPlayerActor()) {
       ItemOverride_Update();
-
-#ifdef ENABLE_DEBUG
-    if (context.gctx->pad_state.input.buttons.IsSet(game::pad::Button::ZL)) {
-      game::act::Player* link = context.gctx->GetPlayerActor();
-      // Before calling let's be absolutely sure we have the player available.
-      if (link) {
-        // 007753CC <- watch point on this
-        game::SaveData& saveData = game::GetCommonData().save;
-        util::Print("%s: Address is %p and value is %u\n", __func__, &saveData.inventory.inventory_count_register,
-                    saveData.inventory.inventory_count_register);
-        return;
+      link::HandleFastOcarina(context.gctx);
+      link::HandleFastArrowSwitch(context.gctx->GetPlayerActor());
+      // May need this for further button presses and checks if we're swimming or not.
+      if (context.gctx->GetPlayerActor()->flags1.IsSet(game::act::Player::Flag1::InWater) &&
+          !context.gctx->GetPlayerActor()->flags_94.IsSet(game::act::Actor::Flag94::Grounded)) {
+        context.is_swimming = true;
+      } else {
+        context.is_swimming = false;
       }
     }
-#endif
 
     return;
   }
+
   void readPadInput() {
     auto* gctx = GetContext().gctx;
     if (!gctx || gctx->type != game::StateType::Play)
       return;
 
-    const bool zr = gctx->pad_state.input.buttons.IsSet(game::pad::Button::ZR);
-    const bool start = gctx->pad_state.input.new_buttons.IsSet(game::pad::Button::Start);
-    const bool select = gctx->pad_state.input.new_buttons.IsSet(game::pad::Button::Select);
-    if (!zr && select) {
+    const u32 pressedButtons = gctx->pad_state.input.buttons.flags;
+    const u32 newButtons = gctx->pad_state.input.new_buttons.flags;
+    if (gSettingsContext.customMaskButton != 0 && pressedButtons == gSettingsContext.customMaskButton) {
       game::ui::OpenScreen(game::ui::ScreenType::Masks);
-      return;
-    }
-
-    if (start && !zr) {
+    } else if (gSettingsContext.customItemButton != 0 && pressedButtons == gSettingsContext.customItemButton) {
       game::ui::OpenScreen(game::ui::ScreenType::Items);
-      return;
-    }
-
-    if (zr && start) {
+    } else if (gSettingsContext.customNotebookButton != 0 && pressedButtons == gSettingsContext.customNotebookButton) {
       if (game::GetCommonData().save.inventory.collect_register.bombers_notebook != 0)
         game::ui::OpenScreen(game::ui::ScreenType::Schedule);
       else
         game::ui::OpenScreen(game::ui::ScreenType::Items);
-      return;
-    }
-
-    if (zr && select) {
+    } else if (gSettingsContext.customMapButton != 0 && pressedButtons == gSettingsContext.customMapButton) {
       // Clear map screen type. (Needed because the screen could be in "soaring" mode.)
       util::Write<u8>(game::ui::GetScreen(game::ui::ScreenType::Map), 0x78E, 0);
       game::ui::OpenScreen(game::ui::ScreenType::Map);
       gctx->pad_state.input.buttons.Clear(game::pad::Button::Select);
       gctx->pad_state.input.new_buttons.Clear(game::pad::Button::Select);
-      return;
+    } else if ((gSettingsContext.customIngameSpoilerButton != 4 && newButtons == (u32)game::pad::Button::Select) ||
+               (gSettingsContext.customIngameSpoilerButton != 8 && newButtons == (u32)game::pad::Button::Start)) {
+      if (game::GetCommonData().save.inventory.collect_register.bombers_notebook != 0)
+        game::ui::OpenScreen(game::ui::ScreenType::Schedule);
+      else
+        game::ui::OpenScreen(game::ui::ScreenType::Items);
     }
+    return;
   }
   void _start(void) {
     // Just in case something needs to be dynamically allocated...

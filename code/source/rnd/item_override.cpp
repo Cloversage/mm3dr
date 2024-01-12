@@ -5,6 +5,7 @@
 #include "rnd/item_table.h"
 #include "rnd/rheap.h"
 #include "rnd/savefile.h"
+#include "rnd/spoiler_data.h"
 
 #if defined ENABLE_DEBUG || defined DEBUG_PRINT
 #include "common/debug.h"
@@ -15,6 +16,7 @@ extern "C" {
 
 namespace rnd {
   static s32 rItemOverrides_Count = 0;
+  static game::act::Id storedActorId = game::act::Id::Player;
   ItemOverride rItemOverrides[640] = {0};
   static game::act::Actor* rDummyActor = NULL;
   static ItemOverride rPendingOverrideQueue[3] = {0};
@@ -24,12 +26,14 @@ namespace rnd {
   u32 rActiveItemGraphicId = 0x0;
   // Split active_item_row into variables for convenience in ASM
   u32 rActiveItemActionId = 0;
+  u32 rActiveItemObjectModelIdx = 0x0;
   u32 rActiveItemTextId = 0;
   u32 rActiveItemObjectId = 0;
   u32 rActiveItemFastChest = 0;
-  u16 rStoredBomberNoteTextId = 0;
+  u16 rStoredTextId = 0;
+  u16 rCustomDungeonItemRetrieved = 0;
 
-  static u8 rSatisfiedPendingFrames = 10;
+  static u8 rSatisfiedPendingFrames = 0;
 
   void ItemOverride_Init(void) {
 #ifdef ENABLE_DEBUG
@@ -38,10 +42,10 @@ namespace rnd {
     rItemOverrides[0].key.type = ItemOverride_Type::OVR_COLLECTABLE;
     rItemOverrides[0].value.getItemId = 0x26;
     rItemOverrides[0].value.looksLikeItemId = 0x26;
-    rItemOverrides[1].key.scene = 0x6C;
+    rItemOverrides[1].key.scene = 0x26;
     rItemOverrides[1].key.type = ItemOverride_Type::OVR_COLLECTABLE;
-    rItemOverrides[1].value.getItemId = 0x12;
-    rItemOverrides[1].value.looksLikeItemId = 0x12;
+    rItemOverrides[1].value.getItemId = 0xB9;
+    rItemOverrides[1].value.looksLikeItemId = 0xB9;
     rItemOverrides[2].key.scene = 0x12;
     rItemOverrides[2].key.type = ItemOverride_Type::OVR_COLLECTABLE;
     rItemOverrides[2].value.getItemId = 0x37;
@@ -72,12 +76,7 @@ namespace rnd {
       // }
       retKey.scene = scene;
       retKey.type = ItemOverride_Type::OVR_CHEST;
-      // #if defined ENABLE_DEBUG || defined DEBUG_PRINT
-      //       util::Print("%s Our flag is actually %#06x and & 0x1F is %#06x\n", __func__,
-      //       actor->params, actor->params & 0x1F);
-      // #endif
       retKey.flag = actor->params & 0x1F;
-      return retKey;
     } else if (actor->actor_type == game::act::Type::Misc) {  // Heart pieces are misc apparently
       // Only override heart pieces and keys
       u32 collectibleType = actor->params & 0xFF;
@@ -88,23 +87,20 @@ namespace rnd {
       retKey.scene = scene;
       retKey.type = ItemOverride_Type::OVR_COLLECTABLE;
       retKey.flag = actor->overlay_info->info->flags;
-      return retKey;
     } else if (actor->id == (game::act::Id)game::ItemId::GoldSkulltula) {  // Gold Skulltula Token
       retKey.scene = (actor->params >> 8) & 0x1F;
       retKey.type = ItemOverride_Type::OVR_SKULL;
       retKey.flag = actor->params & 0xFF;
-      return retKey;
     } else if (scene == 0x14C0 && actor->id == (game::act::Id)0x0075) {  // Grotto Salesman
       retKey.scene = cdata.sub13s[8].data;
       retKey.type = ItemOverride_Type::OVR_GROTTO_SCRUB;
       retKey.flag = getItemId;
-      return retKey;
     } else {
       retKey.scene = scene;
       retKey.type = ItemOverride_Type::OVR_BASE_ITEM;
       retKey.flag = getItemId;
-      return retKey;
     }
+    return retKey;
   }
 
   ItemOverride ItemOverride_Lookup(game::act::Actor* actor, u16 scene, s16 getItemId) {
@@ -144,12 +140,12 @@ namespace rnd {
     u16 resolvedGetItemId = ItemTable_ResolveUpgrades(override.value.getItemId);
 
     ItemRow* itemRow = ItemTable_GetItemRow(resolvedGetItemId);
+    // XXX: Maybe create function for progressive items so that the item drawn is correct?
     u8 looksLikeItemId = override.value.looksLikeItemId;
 
     if (override.value.getItemId == 0x12) {  // Ice trap
       looksLikeItemId = 0;
     }
-
     rActiveItemOverride = override;
     rActiveItemRow = itemRow;
     rActiveItemActionId = itemRow->itemId;
@@ -167,6 +163,8 @@ namespace rnd {
     rActiveItemObjectId = 0;
     rActiveItemGraphicId = 0;
     rActiveItemFastChest = 0;
+    rCustomDungeonItemRetrieved = 0;
+    storedActorId = game::act::Id::Player;
   }
 
   static void ItemOverride_PushPendingOverride(ItemOverride override) {
@@ -231,28 +229,30 @@ namespace rnd {
       return 0;
     u32 currentAniId = player->player_util.state.id;
     switch (currentAniId) {
-    case 0x32D:  // Rolling - Human, Goron
-    case 0x11F:  // Zora Rolling
-    case 0x07A:  // FD Rolling
-    case 0x150:  // Deku idle
-    case 0x339:  // Goron idle
-    case 0x183:  // Human idle
-    case 0x2CF:  // Zora idle
-    case 0x0C2:  // FD idle
-    case 0x225:  // Walking with Sword
-    case 0x135:  // Walking - Human, Deku, Zora, Goron
-    case 0x155:  // Walking - Human, Deku, Zora, Goron
-    case 0x158:  // Walking - Human, Deku, Zora, Goron
+    case 0x07A:  // Rolling - FD
     case 0x0B9:  // Walking - FD
-    case 0x0DC:  // Backwalking after backflip - all forms
-    case 0x0BC:  // Sidewalking - DF
-    case 0x13D:  // Sidewalking
+    case 0x0BA:  // Sidewalking - FD
+    case 0x0C2:  // Idle - FD
+    case 0x0C5:  // Slow Walking - FD
+    case 0x0DC:  // Backwalking - Human, Deku, Zora, Goron, FD
+    case 0x11F:  // Rolling - Human, Zora, Goron Rolling
+    case 0x135:  // Walking - Human, Deku, Zora, Goron
+    case 0x13D:  // Sidewalking - Human, Deku, Zora, Goron
+    case 0x150:  // Idle - Deku
+    case 0x155:  // ESS Maybe - Human, Deku, Zora, Goron
+    case 0x158:  // Slow Walking - Human, Deku, Zora, Goron
+    case 0x183:  // Idle - Human
+    case 0x225:  // Walking with Weapon/Shield Drawn - Human
+    case 0x2CF:  // Idle - Zora
+    case 0x32D:  // Uncurling - Goron
+    case 0x339:  // Idle - Goron
       rSatisfiedPendingFrames++;
       break;
     default:
       rSatisfiedPendingFrames = 0;
+      break;
     }
-    if (rSatisfiedPendingFrames >= 10) {
+    if (rSatisfiedPendingFrames >= 2) {
       rSatisfiedPendingFrames = 0;
       return 1;
     }
@@ -283,7 +283,14 @@ namespace rnd {
     if (key.all == 0) {
       return;
     }
+    SetExtData();
     ItemOverride_AfterKeyReceived(key);
+    SpoilerLog_UpdateIngameLog(key.type, key.scene, key.flag);
+    //#if ENABLE_DEBUG || DEBUG_PRINT
+    // rnd::util::Print(
+    //         "%s: Our key values:\nKey Type %#04x\nKey Scene: %#04x\nKey Flag: %#06x\n",
+    //         key.type, key.scene, key.flag);
+    //#endif
     ItemOverride_Clear();
   }
 
@@ -381,12 +388,10 @@ namespace rnd {
 
   s16 ItemOverride_CheckNpc(game::act::Id actorId, s16 originalGetItemId, s32 incomingNegative) {
     s16 getItemId = incomingNegative ? -originalGetItemId : originalGetItemId;
-    // TODO: Granny Override here - check actor scene, and check gExtData.
     if (actorId == game::act::Id::NpcEnNb) {
       if (gExtSaveData.givenItemChecks.enNbGivenItem > 0) {
         getItemId = incomingNegative ? -0xBA : 0xBA;
       }
-      gExtSaveData.givenItemChecks.enNbGivenItem = 1;
     } else if (actorId == game::act::Id::NpcEnBjt) {
       getItemId = incomingNegative ? -0x01 : 0x01;
     } else if (actorId == game::act::Id::NpcSwampPhotographer) {
@@ -395,19 +400,53 @@ namespace rnd {
       if (gExtSaveData.givenItemChecks.enStoneHeishiGivenItem > 0) {
         getItemId = incomingNegative ? -0xBA : 0xBA;
       }
-      gExtSaveData.givenItemChecks.enStoneHeishiGivenItem = 1;
-    } else if (actorId == game::act::Id::NpcAroma) {
-      gExtSaveData.givenItemChecks.enAlGivenItem = 1;
-    } else if (actorId == game::act::Id::NpcEnGuruGuru) {
-      gExtSaveData.givenItemChecks.enGuruGuruGivenItem = 1;
-    } else if (actorId == game::act::Id::NpcEnYb) {
-      gExtSaveData.givenItemChecks.enYbGivenItem = 1;
-    } else if (actorId == game::act::Id::NpcEnBaba) {
-      gExtSaveData.givenItemChecks.enBabaGivenItem = 1;
-    } else if (actorId == game::act::Id::NpcEnFsn) {
-      gExtSaveData.givenItemChecks.enFsnGivenItem = 1;
+    } else if (actorId == game::act::Id::EnPst) {
+      getItemId = incomingNegative ? -0xBA : 0xBA;
+    } else if (actorId == game::act::Id::EnDns) {
+      // Business scrub salesmen in grotto.
+      // Same scene as gossips so need to set item manually.
+      getItemId = incomingNegative ? -0x01 : 0x01;
+    } else if (getItemId == static_cast<s16>(rnd::GetItemID::GI_MASK_CAPTAINS_HAT)) {
+      gExtSaveData.givenItemChecks.enOskGivenItem = 1;
+    } else if (storedActorId == game::act::Id::EnPst) {
+      getItemId = incomingNegative ? -0xBA : 0xBA;
     }
+
     return getItemId;
+  }
+
+  void SetExtData() {
+    if (storedActorId == game::act::Id::NpcEnNb) {
+      gExtSaveData.givenItemChecks.enNbGivenItem = 1;
+    } else if (storedActorId == game::act::Id::NpcInvisibleGuard) {
+      gExtSaveData.givenItemChecks.enStoneHeishiGivenItem = 1;
+    } else if (storedActorId == game::act::Id::NpcAroma) {
+      gExtSaveData.givenItemChecks.enAlGivenItem = 1;
+    } else if (storedActorId == game::act::Id::NpcEnGuruGuru) {
+      gExtSaveData.givenItemChecks.enGuruGuruGivenItem = 1;
+    } else if (storedActorId == game::act::Id::NpcEnYb) {
+      gExtSaveData.givenItemChecks.enYbGivenItem = 1;
+    } else if (storedActorId == game::act::Id::NpcEnBaba) {
+      gExtSaveData.givenItemChecks.enBabaGivenItem = 1;
+    } else if (storedActorId == game::act::Id::NpcEnFsn) {
+      gExtSaveData.givenItemChecks.enFsnGivenItem = 1;
+    } else if (storedActorId == game::act::Id::NpcEnPm) {
+      gExtSaveData.givenItemChecks.enPmGivenItem = 1;
+    } else if (storedActorId == game::act::Id::EnSsh) {
+      gExtSaveData.givenItemChecks.enSshGivenItem = 1;
+    } else if (storedActorId == game::act::Id::EnDno) {
+      gExtSaveData.givenItemChecks.enDnoGivenItem = 1;
+    } else if (storedActorId == game::act::Id::NpcGreatFairy) {
+      gExtSaveData.givenItemChecks.bgDyYoseizoGivenItem = 1;
+    } else if (storedActorId == game::act::Id::EnIn) {
+      gExtSaveData.givenItemChecks.enInGivenItem = 1;
+    } else if (storedActorId == game::act::Id::EnHs) {
+      gExtSaveData.givenItemChecks.enHsGivenItem = 1;
+    } else if (storedActorId == game::act::Id::EnHgo) {
+      gExtSaveData.givenItemChecks.enHgoGivenItem = 1;
+    } else if (storedActorId == game::act::Id::EnTru) {
+      gExtSaveData.givenItemChecks.enTruGivenItem = 1;
+    }
   }
 
   void ItemOverride_PushPendingFairyRewardItem(game::GlobalContext* gctx, game::act::GreatFairy* fromActor,
@@ -428,6 +467,84 @@ namespace rnd {
     if (override.value.getItemId == 0x12) {
       rActiveItemRow->effectArg1 = override.key.all >> 16;
       rActiveItemRow->effectArg2 = override.key.all & 0xFFFF;
+    }
+    return;
+  }
+
+  void ItemOverride_RevealMapBasedOnId(u8 getItemMapId) {
+    game::SaveData& saveData = game::GetCommonData().save;
+    switch (getItemMapId) {
+    case 0xB4:
+      saveData.overworld_map_data[1] = 0x30;
+      saveData.overworld_map_data[2] = 0xA6;
+      saveData.overworld_map_data[3] = 0x52;
+      saveData.overworld_map_data[4] = 0x01;
+      saveData.overworld_map_data[5] = 0x62;
+      saveData.overworld_map_data[6] = 0x11;
+      saveData.overworld_map_data[7] = 0x02;
+      saveData.overworld_map_data[8] = 0x08;
+      saveData.overworld_map_data[10] = 0x18;
+      saveData.overworld_map_data[12] = 0x0A;
+      saveData.overworld_map_data[13] = 0xF1;
+      saveData.overworld_map_data[14] = 0x01;
+      saveData.overworld_map_get_flags_0x3F_for_all = saveData.overworld_map_get_flags_0x3F_for_all | 1;
+      saveData.anonymous_162 = saveData.anonymous_162 | 3;
+      break;
+    case 0xB5:
+      saveData.overworld_map_data[0] = 0x01;
+      saveData.overworld_map_data[1] = 0x04;
+      saveData.overworld_map_data[4] = 0x90;
+      saveData.overworld_map_data[5] = 0x08;
+      saveData.overworld_map_data[7] = 0x40;
+      saveData.overworld_map_data[8] = 0x61;
+      saveData.overworld_map_data[10] = 0x84;
+      saveData.overworld_map_data[14] = 0x02;
+      saveData.overworld_map_get_flags_0x3F_for_all = saveData.overworld_map_get_flags_0x3F_for_all | 2;
+      saveData.anonymous_162 = saveData.anonymous_162 | 0x1C;
+      break;
+    case 0xB6:
+      saveData.overworld_map_data[5] = 0x10;
+      saveData.overworld_map_data[6] = 0x04;
+      saveData.overworld_map_data[7] = 0x20;
+      saveData.overworld_map_data[9] = 0x61;
+      saveData.overworld_map_data[10] = 0x01;
+      saveData.overworld_map_data[11] = 0x7C;
+      saveData.overworld_map_data[13] = 0x08;
+      saveData.overworld_map_get_flags_0x3F_for_all = saveData.overworld_map_get_flags_0x3F_for_all | 4;
+      saveData.anonymous_162 = saveData.anonymous_162 | 0xE0;
+      break;
+    case 0xB7:
+      saveData.overworld_map_data[2] += 0x01;
+      saveData.overworld_map_data[4] += 0x04;
+      saveData.overworld_map_data[6] += 0x20;
+      saveData.overworld_map_data[8] += 0x06;
+      saveData.overworld_map_data[13] += 0x04;
+      saveData.overworld_map_get_flags_0x3F_for_all = saveData.overworld_map_get_flags_0x3F_for_all | 8;
+      saveData.anonymous_162 = saveData.anonymous_162 | 0x100;
+      break;
+    case 0xB8:
+      saveData.overworld_map_data[2] += 0x10;
+      saveData.overworld_map_data[4] += 0x28;
+      saveData.overworld_map_data[5] += 0x81;
+      saveData.overworld_map_data[6] += 0x88;
+      saveData.overworld_map_data[7] += 0x19;
+      saveData.overworld_map_data[9] += 0x14;
+      saveData.overworld_map_data[14] += 0x04;
+      saveData.overworld_map_get_flags_0x3F_for_all = saveData.overworld_map_get_flags_0x3F_for_all | 0x10;
+      saveData.anonymous_162 = saveData.anonymous_162 | 0x1E00;
+      break;
+    case 0xB9:
+      saveData.overworld_map_data[2] += 0x08;
+      saveData.overworld_map_data[3] += 0x20;
+      saveData.overworld_map_data[9] += 0x88;
+      saveData.overworld_map_data[10] += 0x62;
+      saveData.overworld_map_data[11] += 0x03;
+      saveData.overworld_map_data[12] += 0x01;
+      saveData.overworld_map_get_flags_0x3F_for_all = saveData.overworld_map_get_flags_0x3F_for_all | 0x20;
+      saveData.anonymous_162 = saveData.anonymous_162 | 0x6000;
+      break;
+    default:
+      break;
     }
     return;
   }
@@ -454,33 +571,24 @@ namespace rnd {
   void ItemOverride_GetItemTextAndItemID(game::act::Player* actor) {
     if (rActiveItemRow != NULL) {
       if (rActiveItemOverride.key.type == ItemOverride_Type::OVR_CHEST) {
-#if defined ENABLE_DEBUG || defined DEBUG_PRINT
-        rnd::util::Print("%s: Item Override is the chest right now. Our activeItemRow itemId is %06x\n", __func__,
-                         rActiveItemRow->itemId);
-#endif
-        if (rActiveItemRow->itemId < 0x28 && rActiveItemRow->itemId > 0x30) {
-#if defined ENABLE_DEBUG || defined DEBUG_PRINT
-          rnd::util::Print("%s: Setting indicies rActiveItemOverride.key.scene  %u and rActiveItemOverride.key.flag %u "
-                           "to retrieved.\n",
-                           __func__, rActiveItemOverride.key.scene, rActiveItemOverride.key.flag);
-#endif
+        // Check and see if we have trade items or repeatable bottles and add to the array.
+        if (rActiveItemRow->itemId < 0x28 || (rActiveItemRow->itemId > 0x30 && rActiveItemRow->itemId < 0x9f)) {
           gExtSaveData.chestRewarded[rActiveItemOverride.key.scene][rActiveItemOverride.key.flag] = 1;
         }
       }
       game::GlobalContext* gctx = rnd::GetContext().gctx;
-      // int retVal;
       u16 textId = rActiveItemRow->textId;
       u8 itemId = rActiveItemRow->itemId;
       ItemTable_CallEffect(rActiveItemRow);
-#if defined ENABLE_DEBUG || defined DEBUG_PRINT
-      rnd::util::Print("%s:Player Item ID is %#04x\nScene is %#04x", __func__, actor->get_item_id, gctx->scene);
-#endif
-      // if (gctx->scene != game::SceneId::GoronGraveyard && gctx->scene != game::SceneId::GreatBayCoast &&
-      //     gctx->scene != game::SceneId::MusicBoxHouse && gctx->scene != game::SceneId::ClockTowerInterior)
-      gctx->ShowMessage(textId, actor);
+      // Only check if we have the ID set, that means text is displayed elsewhere.
+      if (rStoredTextId == 0)
+        gctx->ShowMessage(textId, actor);
       // Get_Item_Handler. Don't give ice traps, since it may cause UB.
       if (itemId != (u8)game::ItemId::None) {
         rnd::util::GetPointer<int(game::GlobalContext*, game::ItemId)>(0x233BEC)(gctx, (game::ItemId)itemId);
+        // Since the regular get item handler does not take care of this situation, we need to do it manually.
+        if (rActiveItemOverride.value.getItemId > 0xB3 && rActiveItemOverride.value.getItemId < 0xBA)
+          ItemOverride_RevealMapBasedOnId(rActiveItemOverride.value.getItemId);
       }
       ItemOverride_AfterItemReceived();
     }
@@ -495,6 +603,7 @@ namespace rnd {
       //       rnd::util::Print("%s: Our actor ID is %#06x\n", __func__, fromActor->id);
       // #endif
       s16 getItemId = ItemOverride_CheckNpc(fromActor->id, incomingGetItemId, incomingNegative);
+      storedActorId = fromActor->id;
       override = ItemOverride_Lookup(fromActor, (u16)gctx->scene, getItemId);
     }
     if (override.key.all == 0) {
@@ -518,8 +627,10 @@ namespace rnd {
     }
 
     player->get_item_id = incomingNegative ? -baseItemId : baseItemId;
-    if (fromActor->actor_type != game::act::Type::Chest) {
-      rStoredBomberNoteTextId = rActiveItemRow->textId;
+    // Weird edge case with the way text and masks are handled with Couples' Mask.
+    // Set the text and apply it later in a different patch.
+    if (incomingGetItemId == 0x85) {
+      rStoredTextId = rActiveItemRow->textId;
     }
     return;
   }
@@ -527,11 +638,6 @@ namespace rnd {
   void ItemOverride_GetFairyRewardItem(game::GlobalContext* gctx, game::act::GreatFairy* fromActor,
                                        s16 incomingItemId) {
     int fairyEntrance = game::GetCommonData().sub1.entrance;
-#if defined ENABLE_DEBUG || defined DEBUG_PRINT
-    rnd::util::Print(
-        "%s: Some important info:\ngreatFairyParam: %#06x\nActor type: %#04x\nIncoming item ID: %#04x\nAnon_19: %u",
-        __func__, fairyEntrance, fromActor->actor_type, incomingItemId, gExtSaveData.fairyRewards.nct);
-#endif
     if (fairyEntrance == 0x4600 && gExtSaveData.fairyRewards.nct != 1) {
       gExtSaveData.fairyRewards.nct = 1;
       ItemOverride_PushPendingFairyRewardItem(gctx, fromActor, 0x86);
@@ -567,13 +673,15 @@ namespace rnd {
       gExtSaveData.givenItemChecks.enOsnGivenMask = 1;
     } else if (incomingItemId == 0x50) {
       fromActor = gctx->GetPlayerActor();
+    } else if (incomingItemId == 0x85) {
+      gExtSaveData.givenItemChecks.kafeiGivenItem = 1;
     }
     ItemOverride_GetItem(gctx, fromActor, gctx->GetPlayerActor(), incomingItemId);
     return;
   }
 
   void ItemOverride_RemoveTextId() {
-    rStoredBomberNoteTextId = 0;
+    rStoredTextId = 0;
   }
 
   int ItemOverride_CheckInventoryItemOverride(game::ItemId currentItem) {
@@ -589,16 +697,91 @@ namespace rnd {
       return (int)0xFF;
     } else if (currentItem == game::ItemId::LetterToMama && gExtSaveData.givenItemChecks.enBabaGivenItem == 0) {
       return (int)0xFF;
+    } else if (currentItem == game::ItemId::KeatonMask && gExtSaveData.givenItemChecks.enFsnGivenItem == 0) {
+      return (int)0xFF;
+    } else if (currentItem == game::ItemId::PostmanHat && gExtSaveData.givenItemChecks.enPmGivenItem == 0) {
+      return (int)0xFF;
+    } else if (currentItem == game::ItemId::StoneMask && gExtSaveData.givenItemChecks.enStoneHeishiGivenItem == 0) {
+      return (int)0xFF;
+    } else if (currentItem == game::ItemId::MaskOfTruth && gExtSaveData.givenItemChecks.enSshGivenItem == 0) {
+      return (int)0xFF;
+    } else if (currentItem == game::ItemId::MaskOfScents && gExtSaveData.givenItemChecks.enDnoGivenItem == 0) {
+      return (int)0xFF;
+    } else if (currentItem == game::ItemId::GreatFairyMask && gExtSaveData.givenItemChecks.bgDyYoseizoGivenItem == 0) {
+      return (int)0xFF;
+    } else if (currentItem == game::ItemId::GaroMask && gExtSaveData.givenItemChecks.enInGivenItem == 0) {
+      return (int)0xFF;
+    } else if (currentItem == game::ItemId::PictographBox && gExtSaveData.givenItemChecks.enTruGivenItem == 0) {
+      return (int)0xFF;
+    } else if (currentItem == game::ItemId::BunnyHood && gExtSaveData.givenItemChecks.enHsGivenItem == 0) {
+      return (int)0xFF;
+    } else if (currentItem == game::ItemId::GibdoMask && gExtSaveData.givenItemChecks.enHgoGivenItem == 0) {
+      return (int)0xFF;
+    } else if (currentItem == game::ItemId::RomaniMask && gExtSaveData.givenItemChecks.enMaYtoGivenItem == 0) {
+      return (int)0xFF;
+    } else if (currentItem == game::ItemId::CaptainHat && gExtSaveData.givenItemChecks.enOskGivenItem == 0) {
+      return (int)0xFF;
     }
-
     return (int)currentItem;
   }
   void ItemOverride_SwapSoHGetItemText(game::GlobalContext* gctx, u16 textId, game::act::Actor* fromActor) {
     // Check which text ID is coming in. If it's any mask from Song of Healing, replace it with active item text.
-    if (textId == 0x79 || textId == 0x7a || textId == 0x87 || textId == 0x78 /*|| textId == 0x50*/) {
+    if (textId == 0x79 || textId == 0x7a || textId == 0x87 || textId == 0x78) {
       return;
+    } else if (textId == 0x85) {
+      gctx->ShowMessage(rStoredTextId);
+      rStoredTextId = 0;
     } else
       gctx->ShowMessage(textId);
+    return;
+  }
+
+  bool ItemOverride_CheckTingleMaps(u16 mapId, game::GlobalContext* gctx) {
+    switch (mapId) {
+    case 0x1:
+      if (gExtSaveData.tingleMaps.clock_town_map_get == 0) {
+        gExtSaveData.tingleMaps.clock_town_map_get = 1;
+        return true;
+      }
+      break;
+    case 0x2:
+      if (gExtSaveData.tingleMaps.woodfall_map_get == 0) {
+        gExtSaveData.tingleMaps.woodfall_map_get = 1;
+        return true;
+      }
+      break;
+    case 0x4:
+      if (gExtSaveData.tingleMaps.snowhead_map_get == 0) {
+        gExtSaveData.tingleMaps.snowhead_map_get = 1;
+        return true;
+      }
+      break;
+    case 0x8:
+      if (gExtSaveData.tingleMaps.romani_map_get == 0) {
+        gExtSaveData.tingleMaps.romani_map_get = 1;
+        return true;
+      }
+      break;
+    case 0x10:
+      if (gExtSaveData.tingleMaps.great_bay_map_get == 0) {
+        gExtSaveData.tingleMaps.great_bay_map_get = 1;
+        return true;
+      }
+      break;
+    case 0x20:
+      if (gExtSaveData.tingleMaps.stone_tower_map_get == 0) {
+        gExtSaveData.tingleMaps.stone_tower_map_get = 1;
+        return true;
+      }
+      break;
+    default:
+      return false;
+    }
+    return false;
+  }
+
+  void ItemOverride_SetGrogExtData() {
+    gExtSaveData.givenItemChecks.enHsGivenItem = 1;
     return;
   }
   }

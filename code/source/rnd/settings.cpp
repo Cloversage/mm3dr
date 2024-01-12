@@ -81,7 +81,6 @@ namespace rnd {
   // ARM patch settings.
   extern "C" {
   u8 SettingsEnabledFastSwim(void) {
-    // util::Print("%s: Our value is currently %u\n", gSettingsContext.enableFastZoraSwim);
     return gSettingsContext.enableFastZoraSwim;
   }
 
@@ -91,6 +90,34 @@ namespace rnd {
 
   u8 SettingsEnableFastElegy(void) {
     return gSettingsContext.enableFastElegyStatues;
+  }
+
+  u8 SettingsMaskOfTruthCheck(game::GlobalContext* gctx) {
+    if (gSettingsContext.maskOfTruthRequiredForGossip == 1) {
+      if (gctx->GetPlayerActor()->active_mask_id == game::MaskId::MaskOfTruth) {
+        return 1;
+      } else {
+        return 0;
+      }
+    } else {
+      return 1;
+    }
+    return 0;
+  }
+
+  u8 SettingsFastMaskCheck() {
+    // Maybe check here to see if in first person?
+    game::act::Player* player = rnd::GetContext().gctx->GetPlayerActor();
+    // If we're disabled then just run the default return.
+    if (gSettingsContext.enableFastArrowSwap == 0) {
+      return gSettingsContext.enableFastMaskTransform;
+    } else if (gSettingsContext.enableFastMaskTransform &&
+               player->flags1.IsSet(game::act::Player::Flag1::FirstPersonMode) &&
+               (player->held_item >= game::ItemId::Arrow && player->held_item <= game::ItemId::LightArrow)) {
+      return 0x00;
+    } else {
+      return gSettingsContext.enableFastMaskTransform;
+    }
   }
   }
   // TODO: Change the addr
@@ -160,7 +187,7 @@ namespace rnd {
       "Pictograph Box",
       "Lens of Truth",
       "Hookshot",
-      "Greay Fairy Sword",
+      "Great Fairy Sword",
       "Empty Bottle",
       "Deku Princess",
       "Bottled Bugs",

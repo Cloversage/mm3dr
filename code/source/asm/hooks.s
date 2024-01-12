@@ -5,6 +5,22 @@
 .rActiveItemTextId_addr:
     .word rActiveItemTextId
 
+.global rActiveItemRow
+.rActiveItemRow_addr:
+    .word rActiveItemRow
+
+.global rActiveItemGraphicId
+.rActiveItemGraphicId_addr:
+    .word rActiveItemGraphicId
+
+.global rStoredTextId
+.rStoredTextId_addr:
+    .word rStoredTextId
+
+.global rCustomDungeonItemRetrieved
+.rCustomDungeonItemRetrieved_addr:
+    .word rCustomDungeonItemRetrieved
+
 .global hook_Start
 hook_Start:
     push {r0-r12, lr}
@@ -19,6 +35,41 @@ hook_MainLoop:
     pop {r0-r12, lr}
     ldr r1, [r0,#0x138]
     b 0x0106770
+
+.global hook_Gfx_Update
+hook_Gfx_Update:
+    push {r0-r12, lr}
+    bl Gfx_Update
+    pop {r0-r12, lr}
+    pop {r4-r8, pc}
+
+.global hook_Gfx_AwakeCallback
+hook_Gfx_AwakeCallback:
+    push {r0-r12, lr}
+    bl Gfx_AwakeCallback
+    pop {r0-r12, lr}
+    add r0,r0,#0xC
+    b 0x124DEC
+
+.global hook_Gfx_SleepQueryCallback
+hook_Gfx_SleepQueryCallback:
+    push {r0-r12, lr}
+    bl Gfx_SleepQueryCallback
+    pop {r0-r12, lr}
+    add r0,r0,#0xC
+    b 0x124DF4
+
+.global hook_OverrideCutsceneNextEntrance
+hook_OverrideCutsceneNextEntrance:
+    push {r0-r12, lr}
+    bl SceneEntranceOverride
+    cmp r0,#0x1
+    pop {r0-r12, lr}
+    bne doNotOverrideCutscene
+    bx lr
+doNotOverrideCutscene:
+    bl 0x22A7F8
+    b 0x1B1838
 
 .global hook_ChangeSOHToCustomText
 hook_ChangeSOHToCustomText:
@@ -59,17 +110,27 @@ hook_CheckOcarinaDive:
     beq 0x1E1FB4
     b 0x1e1f10
 
-.global rActiveItemRow
-.rActiveItemRow_addr:
-    .word rActiveItemRow
+.global hook_CheckDungeonItems
+hook_CheckDungeonItems:
+    push {r0-r12, lr}
+    ldr r1,.rCustomDungeonItemRetrieved_addr
+    ldr r1,[r1]
+    cmp r1,#0x1
+    pop {r0-r12, lr}
+    beq 0x233F64
+    ldrh r2, [r2, #82]
+    bx lr
 
-.global rActiveItemGraphicId
-.rActiveItemGraphicId:
-    .word rActiveItemGraphicId
-
-.global rStoredBomberNoteTextId
-.rStoredBomberNoteTextId:
-    .word rStoredBomberNoteTextId
+.global hook_CheckDungeonSmallKeys
+hook_CheckDungeonSmallKeys:
+    push {r0-r12, lr}
+    ldr r1,.rCustomDungeonItemRetrieved_addr
+    ldr r1,[r1]
+    cmp r1,#0x1
+    pop {r0-r12, lr}
+    beq 0x233F64
+    ldrh r0, [r2, #0x52]
+    bx lr
 
 .global hook_SaveFile_Load
 hook_SaveFile_Load:
@@ -88,6 +149,21 @@ hook_SaveFile_Init:
     mov r3,#0x0
     b 0x5b8b28  
 
+.global hook_OverrideItemIdIndex
+hook_OverrideItemIdIndex:
+    push {r0}
+    ldr r0,.rActiveItemGraphicId_addr
+    ldr r0,[r0]
+    cmp r0,#0x0
+    pop {r0}
+    beq noOverrideItemIdIndex
+    ldr r0,.rActiveItemGraphicId_addr
+    ldr r0,[r0]
+    bx lr
+noOverrideItemIdIndex:
+    ldrsh r0, [r0, #-6]
+    bx lr
+
 @ State handler calls 0x5D for masks, check this value and ignore states where that is equal, since this function
 @ is also used by song of soaring and get_item.
 .global hook_RemainsCheckValue
@@ -101,7 +177,7 @@ noIgnoreValues:
 
 .global hook_OverrideDrawIndex
 hook_OverrideDrawIndex:
-    ldr r0,.rActiveItemGraphicId
+    ldr r0,.rActiveItemGraphicId_addr
     ldr r0,[r0]
     cmp r0,#0x0
     beq noOverrideGraphicId
@@ -112,19 +188,19 @@ noOverrideGraphicId:
 
 .global hook_OverrideDrawIndexSecond
 hook_OverrideDrawIndexSecond:
-    ldr r0,.rActiveItemGraphicId
+    ldr r0,.rActiveItemGraphicId_addr
     ldr r0,[r0]
     cmp r0,#0x0
-    beq noOverrideGraphicIdThird
+    beq noOverrideGraphicIdSecond
     b 0x22F47C
-noOverrideGraphicIdThird:
+noOverrideGraphicIdSecond:
     ldrsh r0, [r8,#2]
     b 0x22F478
 
 .global hook_OverrideTextID
 hook_OverrideTextID:
     push {r3}
-    ldr r3,.rActiveItemRow_addr
+    ldr r3,.rActiveItemTextId_addr
     ldr r3,[r3]
     cmp r3,#0x0
     pop {r3}
@@ -138,24 +214,13 @@ noOverrideTextID:
 
 .global hook_OverrideBomberTextID
 hook_OverrideBomberTextID:
+    cmp r1, #0x5F
+    beq noBomberOverride
     cmp r0,r0
     b 0x1D2768
-@     push {r0}
-@     sub r0,#0x600
-@     cmp r0,#0x18
-@     pop {r0}
-@     beq noOverrideBomberTextID
-@     push {r1}
-@     ldr r1,.rStoredBomberNoteTextId
-@     ldr r1,[r1]
-@     cmp r1,#0x0
-@     pop {r1}
-@     beq noOverrideBomberTextID
-@     bl ItemOverride_RemoveTextId
-@     b 0x1D2768
-@ noOverrideBomberTextID:
-@     cmp r0,r0
-@     b 0x1D2768
+noBomberOverride:
+    cmp r1,r0
+    b 0x1D2768
 
 .global hook_OverrideItemID 
 hook_OverrideItemID:
@@ -248,6 +313,11 @@ hook_AromaItemCheck:
     pop {r0-r12, lr}
     b 0x350920
 
+.global hook_CheckMoTSetting
+hook_CheckMoTSetting:
+    bl SettingsMaskOfTruthCheck
+    b 0x35C42C
+
 .global hook_GoronMaskGiveItem
 hook_GoronMaskGiveItem:
     push {r0-r12, lr}
@@ -319,6 +389,45 @@ noOverrideGibdoItemID:
     cpy r0,r5
     bl 0x233BEC
     b 0x41DC4C
+
+.global hook_CouplesMaskGiveItem
+hook_CouplesMaskGiveItem:
+    push {r0-r12, lr}
+    cpy r0,r5
+    cpy r1,r4
+    mov r2,#0x85
+    bl ItemOverride_GetSoHItem
+    ldr r5,.rActiveItemRow_addr
+    ldr r5,[r5]
+    cmp r5,#0x0
+    pop {r0-r12, lr}
+    beq noOverrideCouplesItemID
+    push {r0-r12, lr}
+    cpy r0,r5
+    cpy r1,r4
+    bl ItemOverride_GetItemTextAndItemID
+    pop {r0-r12, lr}
+    b 0x46e264
+noOverrideCouplesItemID:
+    b 0x46e22c
+
+.global hook_AdjustCouplesMaskMessage
+hook_AdjustCouplesMaskMessage:
+    push {r1}
+    ldr r1,.rStoredTextId_addr
+    ldr r1,[r1]
+    cmp r1,#0x0
+    pop {r1}
+    beq normalText
+    ldr r1,.rStoredTextId_addr
+    ldr r1,[r1]
+    push {r0-r12,lr}
+    bl ItemOverride_RemoveTextId
+    pop {r0-r12, lr}
+    b 0x1867C8
+normalText:
+    mov r1,#0xA2
+    b 0x1867C8
 
 .section .loader
 .global hook_into_loader

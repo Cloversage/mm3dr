@@ -26,33 +26,57 @@ namespace game::act {
 
   enum class Id : u16 {
     // [2] Player actor
-    Player = 0,
+    Player = 0x0000,
     // Arrow
-    Arrow = 0xf,
+    Arrow = 0x000F,
     // DayTimer
-    DayTimer = 0xf5,
+    DayTimer = 0x00F5,
     // Elegy of Emptiness statue
-    ObjElegyStatue = 0x1F,
+    ObjElegyStatue = 0x001F,
+    // En_Gm - Gorman Bros Race
+    EnIn = 0x004D,
     // Clear Tag (?)
-    ClearTag = 0x73,
+    ClearTag = 0x0073,
+    // En_Hs - Grog The Chicken Man
+    EnHs = 0x0076,
+    // Cursed Man Spider House
+    EnSsh = 0x0090,
     // [1] Deku Palace / Woodfall Temple moving platforms (after player lands on them)
-    ObjRailLift = 0xd8,
+    ObjRailLift = 0x00D8,
+    // Shooting Gallery - Man
+    EnSyatekiMan = 0x00C2,
     // [9] Odolwa
-    BossOdolwa = 0xcb,
+    BossOdolwa = 0x00CB,
     // [9] Twinmold (Red/Blue)
-    BossTwinmold = 0xcc,
+    BossTwinmold = 0x00CC,
     // [9] Gyorg
-    BossGyorg = 0xcd,
+    BossGyorg = 0x00CD,
+    // Great Fairy
+    NpcGreatFairy = 0x00D2,
     // [4] Kafei
     NpcKafei = 0x00F4,
+    // Koume (Boat Lady)
+    EnTru = 0x0102,
+    // Banker
+    EnGinkoMan = 0x010F,
+    // Deku Butler
+    EnDno = 0x0117,
     // Ice platform created using ice arrows.
     BgIcePlatform = 0x013E,
     // Npc For Curiosity Shop Owner
     NpcEnFsn = 0x0157,
     // Npc For Boat Photography
     NpcSwampPhotographer = 0x0158,
+    // NPC Postman
+    NpcEnPm = 0x0166,
     // Goht
     BossGoht = 0x016E,
+    // Postbox
+    EnPst = 0x0182,
+    // Ocean Spiderhouse NPC
+    EnOsh = 0x019A,
+    // Cremia
+    EnMaYto = 0x01AF,
     // [7] Owl statue
     ObjOwlStatue = 0x01B2,
     // [4] Old Lady from Bomb Shop
@@ -62,9 +86,15 @@ namespace game::act {
     // GuruGuru (Bremen Mask Give Item)
     NpcEnGuruGuru = 0x01D7,
     // Npc Invisible Guard
-    NpcInvisibleGuard = 0x1D9,
+    NpcInvisibleGuard = 0x01D9,
+    // Pamela's Father Gibdo Mode
+    EnHgo = 0x01DF,
+    // Deku Salesmen
+    EnDns = 0x01DB,
     // Npc Madame Aroma
-    NpcAroma = 0x1F1,
+    NpcAroma = 0x01F1,
+    // Npc Mayor Dotour
+    EnDt = 0x01FE,
     // [4] Rosa Sisters
     NpcRosaSisters = 0x020A,
     // En_Yb (Kamarao)

@@ -1,10 +1,24 @@
 #include "rnd/spoiler_data.h"
 #include "game/common_data.h"
+#include "rnd/item_override.h"
 #include "rnd/settings.h"
 #include "z3d/z3DVec.h"
 
 namespace rnd {
   SpoilerData gSpoilerData = {0};
+  SpoilerDataLocs gSpoilerDataLocs[SPOILER_LOCDATS] = {0};
+
+  SpoilerItemLocation* SpoilerData_ItemLoc(u16 itemIndex) {
+    return &gSpoilerDataLocs[itemIndex / SPOILER_ITEMS_MAX].ItemLocations[itemIndex % SPOILER_ITEMS_MAX];
+  }
+
+  SpoilerItemCollectType SpoilerData_CollectType(u16 itemIndex) {
+    return gSpoilerData.ItemLocations[itemIndex].CollectType;
+  }
+
+  char* SpoilerData_StringData(u16 itemIndex) {
+    return gSpoilerDataLocs[itemIndex / SPOILER_ITEMS_MAX].StringData;
+  }
 
   char* SpoilerData_GetItemLocationString(u16 itemIndex) {
     return &gSpoilerData.StringData[gSpoilerData.ItemLocations[itemIndex].LocationStrOffset];
@@ -20,11 +34,18 @@ namespace rnd {
   }
 
   u8 SpoilerData_ChestCheck(SpoilerItemLocation itemLoc) {
-    // TODO: Implement Chest Checking. No need to use bits as we have
-    // builtin BitField classes.
-    // Reference:
-    // https://github.com/gamestabled/OoT3D_Randomizer/blob/e53be23c14090b15c6c39e08933ca7af54f747f7/code/src/spoiler_data.c#L25-L32
-    return 0;
+    return -1;
+  }
+
+  u8 SpoilerLog_UpdateIngameLog(ItemOverride_Type type, u8 scene, u8 flag) {
+    // SpoilerData currentCheck = {0};
+    for (int i = 0; i < gSpoilerData.ItemLocationsCount; i++) {
+      if (gSpoilerData.ItemLocations[i].LocationScene == scene && gSpoilerData.ItemLocations[i].OverrideType == type &&
+          gSpoilerData.ItemLocations[i].LocationFlag == flag) {
+        gSpoilerData.ItemLocations[i].Collected = true;
+      }
+    }
+    return -1;
   }
 
   u8 SpoilerData_CollectableCheck(SpoilerItemLocation itemLoc) {
@@ -32,7 +53,7 @@ namespace rnd {
     // builtin BitField classes.
     // Reference:
     // https://github.com/gamestabled/OoT3D_Randomizer/blob/e53be23c14090b15c6c39e08933ca7af54f747f7/code/src/spoiler_data.c#L34-L41
-    return 0;
+    return -1;
   }
 
   // Shop checks, will need to be decomped, most likely in common_data.h.
@@ -99,6 +120,17 @@ namespace rnd {
     }
 
     SpoilerItemLocation itemLoc = gSpoilerData.ItemLocations[itemIndex];
+    if (itemLoc.Collected == true) {
+      return 1;
+    }
+    if (itemLoc.CollectionCheckType == SPOILER_CHK_ALWAYS_COLLECTED) {
+      return 1;
+    }
+    if (itemLoc.CollectionCheckType == SPOILER_CHK_NONE) {
+      return 0;
+    }
+    return 0;
+    /*
     // game::SaveData &gSaveContext = game::GetCommonData().save;
     switch (itemLoc.CollectionCheckType) {
     case SPOILER_CHK_NONE: {  // Not ever 'collectable' (Ganon, or any item that didn't have a type
@@ -121,6 +153,10 @@ namespace rnd {
     }
     case SPOILER_CHK_OCEAN_SKULLTULA: {  // Ocean skulltula
       // gSaveContext.skulltulas_collected.ocean_count
+      return -1;
+    }
+    case SPOILER_CHK_STRAY_FAIRY: {
+      // gSaveContext.strayfairies_collected
       return -1;
     }
     case SPOILER_CHK_ITEM_GET_INF: {  // Check a flag set in item_get_inf
@@ -155,6 +191,23 @@ namespace rnd {
     }
     }
     return 0;
+    */
+  }
+
+  u8 SpoilerData_GetIsItemLocationRevealed(u16 itemIndex) {
+    if (gSettingsContext.ingameSpoilers) {
+      return 1;
+    }
+
+    SpoilerItemLocation* itemLoc = SpoilerData_ItemLoc(itemIndex);
+
+    if (itemLoc->RevealType == REVEALTYPE_ALWAYS) {
+      return 1;
+    } else if (itemLoc->RevealType == REVEALTYPE_NORMAL) {
+      return 0;
+    }
+
+    return SaveFile_GetIsSceneDiscovered(itemLoc->LocationScene);
   }
 
 }  // namespace rnd

@@ -7,7 +7,7 @@
 #include "z3d/z3DVec.h"
 
 // Increment the version number whenever the ExtSaveData structure is changed
-#define EXTSAVEDATA_VERSION 03
+#define EXTSAVEDATA_VERSION 07
 
 namespace rnd {
   void SaveFile_SkipMinorCutscenes();
@@ -27,6 +27,7 @@ namespace rnd {
   bool SaveFile_IsValidSettingsHealth(void);
   void SaveFile_InitExtSaveData(u32 fileBaseIndex);
   void SaveFile_LoadExtSaveData(u32 saveNumber);
+  u8 SaveFile_GetIsSceneDiscovered(u8 sceneNum);
   extern "C" void SaveFile_SaveExtSaveData();
 
   typedef struct {
@@ -36,22 +37,33 @@ namespace rnd {
     u8 playedSosOnce;
     u8 playedElegyOnce;
     union GivenItemRegister {
-      u16 raw;
+      u32 raw;
 
-      BitField<0, 1, u16> enNbGivenItem;
-      BitField<1, 1, u16> enAlGivenItem;
-      BitField<2, 1, u16> enBabaGivenItem;
-      BitField<3, 1, u16> enStoneHeishiGivenItem;
-      BitField<4, 1, u16> mummyDaddyGivenItem;
-      BitField<5, 1, u16> enGuruGuruGivenItem;
-      BitField<6, 1, u16> enYbGivenItem;
-      BitField<7, 1, u16> enGegGivenItem;
-      BitField<8, 1, u16> enZogGivenItem;
-      BitField<9, 1, u16> enGgGivenItem;
-      BitField<10, 1, u16> enOsnGivenMask;
-      BitField<11, 1, u16> enOsnGivenNotebook;
-      BitField<12, 1, u16> enFsnGivenItem;
-      BitField<13, 1, u16> unused;
+      BitField<0, 1, u32> enNbGivenItem;
+      BitField<1, 1, u32> enAlGivenItem;
+      BitField<2, 1, u32> enBabaGivenItem;
+      BitField<3, 1, u32> enStoneHeishiGivenItem;
+      BitField<4, 1, u32> mummyDaddyGivenItem;
+      BitField<5, 1, u32> enGuruGuruGivenItem;
+      BitField<6, 1, u32> enYbGivenItem;
+      BitField<7, 1, u32> enGegGivenItem;
+      BitField<8, 1, u32> enZogGivenItem;
+      BitField<9, 1, u32> enGgGivenItem;
+      BitField<10, 1, u32> enOsnGivenMask;
+      BitField<11, 1, u32> enOsnGivenNotebook;
+      BitField<12, 1, u32> enFsnGivenItem;
+      BitField<13, 1, u32> enPmGivenItem;
+      BitField<14, 1, u32> enSshGivenItem;
+      BitField<15, 1, u32> enDnoGivenItem;
+      BitField<16, 1, u32> bgDyYoseizoGivenItem;
+      BitField<17, 1, u32> enInGivenItem;
+      BitField<18, 1, u32> kafeiGivenItem;
+      BitField<19, 1, u32> enHgoGivenItem;
+      BitField<20, 1, u32> enTruGivenItem;
+      BitField<21, 1, u32> enHsGivenItem;
+      BitField<22, 1, u32> enMaYtoGivenItem;
+      BitField<23, 1, u32> enOskGivenItem;
+      BitField<24, 8, u32> unused;
     };
     GivenItemRegister givenItemChecks;
     union FairyCollectRegister {
@@ -65,6 +77,18 @@ namespace rnd {
       BitField<5, 3, u8> unused;
     };
     FairyCollectRegister fairyRewards;
+    union TingleCollectRegister {
+      u8 raw;
+
+      BitField<0, 1, u8> clock_town_map_get;
+      BitField<1, 1, u8> woodfall_map_get;
+      BitField<2, 1, u8> snowhead_map_get;
+      BitField<3, 1, u8> romani_map_get;
+      BitField<4, 1, u8> great_bay_map_get;
+      BitField<5, 1, u8> stone_tower_map_get;
+      BitField<6, 2, u8> unused;
+    };
+    TingleCollectRegister tingleMaps;
     u8 chestRewarded[116][30];  // Reward table that's stored by scene and chest param/flag.
   } ExtSaveData;
 

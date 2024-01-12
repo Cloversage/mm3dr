@@ -3,7 +3,6 @@ extern "C" {
 }
 #include <string.h>
 #include "rnd/item_effect.h"
-#include "rnd/razor_sword.h"
 #include "rnd/savefile.h"
 #include "rnd/settings.h"
 #if defined ENABLE_DEBUG || defined DEBUG_PRINT
@@ -21,12 +20,14 @@ namespace rnd {
                      comData.save_idx, saveData.has_completed_intro);
 #endif
 #ifdef ENABLE_DEBUG
-    saveData.equipment.sword_shield.sword = game::SwordType::GildedSword;
-    saveData.equipment.sword_shield.shield = game::ShieldType::MirrorShield;
     saveData.player.razor_sword_hp = 0x64;
-    saveData.inventory.inventory_count_register.quiver_upgrade = game::Quiver::Quiver50;
+    saveData.skulltulas_collected.swamp_count = 30;
+    saveData.anonymous_162 = saveData.anonymous_162 | 0x6000;
+    rnd::util::GetPointer<void(game::ItemId)>(0x22b14c)(game::ItemId::MaskOfTruth);
+    rnd::util::GetPointer<void(game::ItemId)>(0x22b14c)(game::ItemId::PictographBox);
+    // saveData.inventory.inventory_count_register.quiver_upgrade = game::Quiver::Quiver50;
     saveData.inventory.inventory_count_register.bomb_bag_upgrade = game::BombBag::BombBag40;
-    // saveData.inventory.inventory_count_register.wallet_upgrade = 2;
+    saveData.inventory.inventory_count_register.wallet_upgrade = 2;
     saveData.inventory.inventory_count_register.stick_upgrades = 2;
     saveData.inventory.inventory_count_register.nut_upgrade = 2;
     saveData.player.rupee_count = 500;
@@ -40,13 +41,13 @@ namespace rnd {
     saveData.inventory.items[9] = game::ItemId::DekuNuts;
     saveData.inventory.items[10] = game::ItemId::MagicBean;
     saveData.inventory.items[12] = game::ItemId::PowderKeg;
-    saveData.inventory.items[13] = game::ItemId::PictographBox;
-    saveData.inventory.items[14] = game::ItemId::LensOfTruth;
+    // saveData.inventory.items[13] = game::ItemId::PictographBox;
+    // saveData.inventory.items[14] = game::ItemId::LensOfTruth;
     saveData.inventory.items[15] = game::ItemId::Hookshot;
     saveData.inventory.items[20] = game::ItemId::LandTitleDeed;
 
-    // saveData.inventory.masks[5] = game::ItemId::DekuMask;
-    // rnd::util::GetPointer<void(game::ItemId)>(0x22b14c)(game::ItemId::DekuMask);
+    saveData.inventory.masks[5] = game::ItemId::DekuMask;
+    rnd::util::GetPointer<void(game::ItemId)>(0x22b14c)(game::ItemId::BremenMask);
     saveData.inventory.masks[11] = game::ItemId::GoronMask;
     saveData.inventory.masks[17] = game::ItemId::ZoraMask;
     saveData.inventory.masks[23] = game::ItemId::FierceDeityMask;
@@ -72,7 +73,7 @@ namespace rnd {
     saveData.inventory.stone_tower_dungeon_items.compass = 1;
     saveData.inventory.stone_tower_dungeon_items.boss_key = 1;
     saveData.inventory.woodfall_fairies = 14;
-    saveData.player.magic_acquired = 1;   // Game does not check if value = 0, magic items still
+    // saveData.player.magic_acquired = 1;   // Game does not check if value = 0, magic items still
     saveData.player.magic_size_type = 0;  // saveData.player.magic = 10;
     saveData.player.magic_num_upgrades = 0;
     saveData.equipment.data[3].item_btns[0] = game::ItemId::DekuNuts;
@@ -102,7 +103,7 @@ namespace rnd {
     saveData.inventory.collect_register.song_of_soaring = 1;
     saveData.inventory.collect_register.song_of_time = 1;
     // saveData.inventory.collect_register.oath_to_order = 1;
-    // saveData.inventory.collect_register.song_of_healing = 1;
+    saveData.inventory.collect_register.song_of_healing = 1;
 
     gSettingsContext.skipBombersMinigame = 1;
     gSettingsContext.freeScarecrow = 1;
@@ -116,7 +117,6 @@ namespace rnd {
     if (isNewFile == 0) {
       SaveFile_InitExtSaveData(comData.save_idx);
       saveData.has_tatl = true;
-
       // Skips cutscenes with no item checks attached
       // Also does not skip location access cutscenes like woodfall temple rise
       SaveFile_SkipMinorCutscenes();
@@ -137,8 +137,8 @@ namespace rnd {
       // saveData.inventory.collect_register.song_of_healing = 1;  // until happy mask salesman is overridden
       saveData.player.owl_statue_flags.clock_town = 1;
 #ifdef ENABLE_DEBUG
-      gSettingsContext.startingKokiriSword = 2;
-      gSettingsContext.startingShield = 2;
+      gSettingsContext.startingKokiriSword = 0;
+      gSettingsContext.startingShield = 0;
 #endif
       SaveFile_SetStartingInventory();
 
@@ -150,7 +150,8 @@ namespace rnd {
       saveData.skip_tingle_intro_dialogue_0x01 = 0x01;
 
       saveData.player_form = game::act::Player::Form::Human;
-      saveData.inventory.collect_register.bombers_notebook = 1;
+      // Shuffling now works, removing the starting item with notebook.
+      // saveData.inventory.collect_register.bombers_notebook = 1;
     }
   }
 
@@ -204,7 +205,7 @@ namespace rnd {
     saveData.talt_dialogue_great_bay_temple.whirlpool_room_tatl_dialogue = 1;
 
     // tutorials
-    saveData.cut_scene_flag_bundle.map_tutorial_by_tingle = 1;
+    // saveData.cut_scene_flag_bundle.map_tutorial_by_tingle = 1;
 
     // Misc cutscenes
     saveData.meeting_happy_mask_salesman_0x01 = 0x01;
@@ -313,6 +314,12 @@ namespace rnd {
     saveData.overworld_map_data[12] = 0x0B;
     saveData.overworld_map_data[13] = 0xFD;
     saveData.overworld_map_data[14] = 0x07;
+    gExtSaveData.tingleMaps.clock_town_map_get = 1;
+    gExtSaveData.tingleMaps.great_bay_map_get = 1;
+    gExtSaveData.tingleMaps.romani_map_get = 1;
+    gExtSaveData.tingleMaps.snowhead_map_get = 1;
+    gExtSaveData.tingleMaps.stone_tower_map_get = 1;
+    gExtSaveData.tingleMaps.woodfall_map_get = 1;
   }
 
   // Resolve the item ID for the starting bottle
@@ -338,6 +345,7 @@ namespace rnd {
   void SaveFile_SetStartingInventory(void) {
     game::PlayerData& playerData = game::GetCommonData().save.player;
     game::EquipmentData& equipmentData = game::GetCommonData().save.equipment;
+    // game::SaveData& saveBackupData = game::GetCommonData().save_backup;
     game::SaveData& saveData = game::GetCommonData().save;
     // give maps and compasses
     if (gSettingsContext.mapsAndCompasses == (u8)MapsAndCompassesSetting::MAPSANDCOMPASSES_ANY_DUNGEON) {
@@ -361,6 +369,12 @@ namespace rnd {
       saveData.inventory.great_bay_temple_keys = 3;
       saveData.inventory.stone_tower_temple_keys = 4;
       // give starting spirit keys for vanilla key locations
+    } else {
+      // Init to 0 as the game inits to 255.
+      saveData.inventory.woodfall_temple_keys = 0;
+      saveData.inventory.snowhead_temple_keys = 0;
+      saveData.inventory.great_bay_temple_keys = 0;
+      saveData.inventory.stone_tower_temple_keys = 0;
     }
 
     // give boss keys
@@ -429,6 +443,10 @@ namespace rnd {
       saveData.inventory.item_counts[6] = (gSettingsContext.startingHerosBow + 2) * 10;
     } else {
       saveData.inventory.inventory_count_register.quiver_upgrade = game::Quiver::NoQuiver;
+#ifdef ENABLE_DEBUG
+      saveData.inventory.inventory_count_register.quiver_upgrade = game::Quiver::Quiver50;
+      // rnd::util::GetPointer<void(game::ItemId, int)>(0x21d440)(game::ItemId::Arrow, 0x1e);
+#endif
     }
 
     if (gSettingsContext.startingFireArrows) {
@@ -494,11 +512,13 @@ namespace rnd {
       saveData.equipment.data->item_btn_b = game::ItemId::None;
     } else if (gSettingsContext.startingKokiriSword == (u8)StartingSwordSetting::STARTINGSWORD_KOKIRI) {
       equipmentData.sword_shield.sword = game::SwordType::KokiriSword;
+      saveData.equipment.data[0].item_btn_b = game::ItemId::KokiriSword;
     } else if (gSettingsContext.startingKokiriSword == (u8)StartingSwordSetting::STARTINGSWORD_RAZOR) {
-      playerData.razor_sword_hp = RS_SetDurability();
       equipmentData.sword_shield.sword = game::SwordType::RazorSword;
+      saveData.equipment.data[0].item_btn_b = game::ItemId::RazorSword;
     } else if (gSettingsContext.startingKokiriSword == (u8)StartingSwordSetting::STARTINGSWORD_GILDED) {
       equipmentData.sword_shield.sword = game::SwordType::GildedSword;
+      saveData.equipment.data[0].item_btn_b = game::ItemId::GildedSword;
     }
 
     if (gSettingsContext.shuffleStartingShield) {
@@ -744,20 +764,15 @@ namespace rnd {
   }
 
   void SaveFile_InitExtSaveData(u32 saveNumber) {
-#if defined ENABLE_DEBUG || defined DEBUG_PRINT
-    util::Print("%s: INITING ExtData.\n", __func__);
-#endif
     gExtSaveData.version = EXTSAVEDATA_VERSION;  // Do not change this line
     gExtSaveData.isNewFile = 1;
-#if defined ENABLE_DEBUG || defined DEBUG_PRINT
-    util::Print("%s: Size of isNewFile and version is %u and %u", __func__, sizeof(gExtSaveData.isNewFile),
-                sizeof(gExtSaveData.version));
-#endif
     // TODO: BitField for event flags instead?
     // memset(&gExtSaveData.extInf, 0, sizeof(gExtSaveData.extInf));
     gExtSaveData.givenItemChecks.raw = 0;
     gExtSaveData.fairyRewards.raw = 0;
+    gExtSaveData.tingleMaps.raw = 0;
     gExtSaveData.playtimeSeconds = 0;
+    memset(&gExtSaveData.chestRewarded, 0, sizeof(gExtSaveData.chestRewarded));
     // TODO: Settings options belong in ext.
     // memset(&gExtSaveData.scenesDiscovered, 0, sizeof(gExtSaveData.scenesDiscovered));
     // memset(&gExtSaveData.entrancesDiscovered, 0, sizeof(gExtSaveData.entrancesDiscovered));
@@ -820,6 +835,19 @@ namespace rnd {
     extDataUnmount(fsa);
     extDataClose(fileHandle);
   }
+
+  u8 SaveFile_GetIsSceneDiscovered(u8 sceneNum) {
+    // TODO: ENSURE THE SCENES ARE CHECKED WITH
+    // OUR BITFLAGS. NOT USING <<.
+    /*u32 numBits = sizeof(u32) * 8;
+    u32 idx     = sceneNum / numBits;
+    if (idx < SAVEFILE_SCENES_DISCOVERED_IDX_COUNT) {
+        u32 bit = 1 << (sceneNum - (idx * numBits));
+        return (gExtSaveData.scenesDiscovered[idx] & bit) != 0;
+    }*/
+    return 0;
+  }
+
   extern "C" void SaveFile_SaveExtSaveData() {
 #if defined ENABLE_DEBUG || defined DEBUG_PRINT
     rnd::util::Print("%s: Saving extdata.\n", __func__);
@@ -837,9 +865,6 @@ namespace rnd {
     path[1] = comData.save_idx + '0';
 
     extDataWriteFileDirectly(fsa, path, &gExtSaveData, 0, sizeof(gExtSaveData));
-#if defined ENABLE_DEBUG || defined DEBUG_PRINT
-    util::Print("%s: Unmounting now...\n", __func__);
-#endif
     extDataUnmount(fsa);
   }
 

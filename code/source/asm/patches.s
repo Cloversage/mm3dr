@@ -5,16 +5,6 @@
 patch_DecoupleZlZr:
     b 0x0116718
 
-.section .patch_SpawnFastElegyStatues
-.global patch_SpawnFastElegyStatues
-patch_SpawnFastElegyStatues: 
-    b hook_SpawnFastElegyStatues
-
-.section .patch_CheckCurrentInventoryOverrideItem
-.global patch_CheckCurrentInventoryOverrideItem
-patch_CheckCurrentInventoryOverrideItem:
-    b hook_CheckCurrentInventory
-
 .section .patch_startHeap
 .global patch_startHeap
 patch_startHeap:
@@ -49,6 +39,21 @@ patch_MainLoop:
 patch_DecoupleStartSelect:
     nop
 
+.section .patch_AwakeCallback
+.global AwakeCallback_patch
+AwakeCallback_patch:
+    b hook_Gfx_AwakeCallback
+
+.section .patch_SleepQueryCallback
+.global SleepQueryCallback_patch
+SleepQueryCallback_patch:  
+    b hook_Gfx_SleepQueryCallback
+
+.section .patch_Gfx_Update
+.global Gfx_Update_patch
+Gfx_Update_patch:
+    b hook_Gfx_Update
+
 @ This should remove the overwriting message for when the
 @ user receives the Zora Mask.
 @ Largely untested, need to check for any UB.
@@ -61,6 +66,12 @@ patch_RemoveSOHCutesceneAfterMessage:
 .global patch_OverrideBombersNotebook
 patch_OverrideBombersNotebook:
     b hook_OverrideHMSBombers
+
+
+.section .patch_OverrideCutsceneNextEntrance
+.global patch_OverrideCutsceneNextEntrance
+patch_OverrideCutsceneNextEntrance:
+    bl hook_OverrideCutsceneNextEntrance
 
 @ There's a while loop located in the event
 @ timer that checks if we have mystery milk.
@@ -98,11 +109,51 @@ patch_DoNotRemoveKeys:
     nop
     nop
 
+@ NOP out the bit of code that checks your sword and gives it back if it 
+@ is not a razor sword. This should prevent us from ever getting Kokiri sword on 
+@ cycle reset.
+.section .patch_DoNotGiveSwordBackOnReset
+.global patch_DoNotGiveSwordBackOnReset
+patch_DoNotGiveSwordBackOnReset:
+    nop
+    nop
+    nop
+
+.section .patch_RemoveItemBUsabilityOnReset
+.global patch_RemoveItemBUsabilityOnReset
+patch_RemoveItemBUsabilityOnReset:
+    nop
+
+.section .patch_RemoveDekuMaskCheckSoT
+.global patch_RemoveDekuMaskCheckSoT
+patch_RemoveDekuMaskCheckSoT:
+    b 0x1D80AC
+
 @ Avoids all the check items for mystery milk so we can use items freely.
 .section .patch_RemoveMysteryMilkUsabilityCheck
 .global patch_RemoveMysteryMilkUsabilityCheck
 patch_RemoveMysteryMilkUsabilityCheck:
     nop
+
+.section .patch_SpawnFastElegyStatues
+.global patch_SpawnFastElegyStatues
+patch_SpawnFastElegyStatues: 
+    b hook_SpawnFastElegyStatues
+
+.section .patch_CheckCurrentInventoryOverrideItem
+.global patch_CheckCurrentInventoryOverrideItem
+patch_CheckCurrentInventoryOverrideItem:
+    b hook_CheckCurrentInventory
+
+.section .patch_CheckDungeonItems
+.global patch_CheckDungeonItems
+patch_CheckDungeonItems:
+    bl hook_CheckDungeonItems
+
+.section .patch_CheckDungeonSmallKeys
+.global patch_CheckDungeonSmallKeys
+patch_CheckDungeonSmallKeys:
+    bl hook_CheckDungeonSmallKeys
 
 .section .patch_DisableMilkTimer
 .global patch_DisableMilkTimer
@@ -146,6 +197,17 @@ patch_ISGCrouchStabTwo:
     nop
     nop
 
+.section .patch_RemoveRazordSwordHealth
+.global patch_RemoveRazordSwordHealth
+patch_RemoveRazordSwordHealth:
+    nop
+
+.section .patch_OverrideItemIdIndex
+.global patch_OverrideItemIdIndex
+patch_OverrideItemIdIndex:
+@TODO: Branch off to hook and load addr that is needed from text ID.
+    bl hook_OverrideItemIdIndex
+
 .section .patch_RemoveRemainsStateCheck
 .global patch_RemoveRemainsStateCheck
 patch_RemoveRemainsStateCheck:
@@ -180,6 +242,16 @@ OverrideItemID_patch:
 .global patch_RemoveGoronMaskCheckDarmani
 patch_RemoveGoronMaskCheckDarmani:
     b hook_DarmaniRewardCheck
+
+.section .patch_OverrideQuiverArchery
+.global patch_OverrideQuiverArchery
+patch_OverrideQuiverArchery:
+    mov r2,#0x47
+
+.section .patch_OverrideQuiverArcheryTwo
+.global patch_OverrideQuiverArcheryTwo
+patch_OverrideQuiverArcheryTwo:
+    mov r2,#0x47
 
 .section .patch_OverrideFairyGiveItem
 .global OverrideFairyItemID_patch
@@ -217,15 +289,21 @@ patch_HandleOcarinaHooks:
     b hook_HandleOcarina
 
 @ Remove call from twinmold->life -= twinmold_min_damage.
-.section .patch_TwinmoldConsistentDamage
-.global patch_TwinmoldConsistentDamage
-patch_TwinmoldConsistentDamage:
-    nop
+@ .section .patch_TwinmoldConsistentDamage
+@ .global patch_TwinmoldConsistentDamage
+@ patch_TwinmoldConsistentDamage:
+@     nop
 
 .section .patch_FasterBlockMovement
 .global patch_FasterBlockMovement
 patch_FasterBlockMovement:
     .float 50.0
+
+@ Removes sword being removed from inventory during 
+.section .patch_DoNotRemoveSwordGabora
+.global patch_DoNotRemoveSwordGabora
+patch_DoNotRemoveSwordGabora:
+    nop
 
 .section .patch_FasterBlockMovementBack
 .global patch_FasterBlockMovementBack
@@ -237,6 +315,12 @@ patch_FasterBlockMovementBack:
 patch_SaveExtDataOnOwl:
     b hook_OwlExtDataSave
 
+@ nop a bne statement to allow ice arrows to be used on any water surface.
+.section .patch_IceArrowsAnywhere
+.global patch_IceArrowsAnywhere
+patch_IceArrowsAnywhere:
+    nop
+
 .section .patch_RemoveZoraMaskCheckMikau
 .global patch_RemoveZoraMaskCheckMikau
 patch_RemoveZoraMaskCheckMikau:
@@ -246,6 +330,23 @@ patch_RemoveZoraMaskCheckMikau:
 .global patch_AromaItemCheck
 patch_AromaItemCheck:
     b hook_AromaItemCheck
+
+.section .patch_OverrideProgessiveWallet
+.global patch_OverrideProgessiveWallet
+patch_OverrideProgessiveWallet:
+@Override to use the progressive wallet instead.
+    mov r2,#0x48
+
+.section .patch_OverrideProgessiveWalletTwo
+.global patch_OverrideProgessiveWalletTwo
+patch_OverrideProgessiveWalletTwo:
+@Override to use the progressive wallet instead.
+    mov r2,#0x48
+
+.section .patch_CheckMoTRequirement
+.global patch_CheckMoTRequirement
+patch_CheckMoTRequirement:
+    b hook_CheckMoTSetting
 
 .section .patch_HMSGiveItem
 .global patch_HMSGiveItem
@@ -276,6 +377,16 @@ patch_RemoveSoHMaskAppearing:
 .global patch_GibdoMaskGiveItem
 patch_GibdoMaskGiveItem:
     b hook_GibdoMaskGiveItem
+
+.section .patch_CouplesMaskGiveItem
+.global patch_CouplesMaskGiveItem
+patch_CouplesMaskGiveItem:
+    b hook_CouplesMaskGiveItem
+
+.section .patch_RemoveCouplesMaskMessage
+.global patch_RemoveCouplesMaskMessage
+patch_RemoveCouplesMaskMessage:
+    b hook_AdjustCouplesMaskMessage
 
 .section .patch_loader
 .global loader_patch

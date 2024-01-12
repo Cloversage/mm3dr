@@ -61,23 +61,18 @@ namespace rnd {
   }
 
   void ItemEffect_GiveSmallKey(game::CommonData* comData, s16 dungeonId, s16 arg2) {
-    s8 keys;
     switch (dungeonId) {
     case 0:
-      keys = comData->save.inventory.woodfall_temple_keys < 0 ? 0 : comData->save.inventory.woodfall_temple_keys;
-      comData->save.inventory.woodfall_temple_keys = keys + 1;
+      comData->save.inventory.woodfall_temple_keys = comData->save.inventory.woodfall_temple_keys + 1;
       break;
     case 1:
-      keys = comData->save.inventory.snowhead_temple_keys < 0 ? 0 : comData->save.inventory.snowhead_temple_keys;
-      comData->save.inventory.snowhead_temple_keys = keys + 1;
+      comData->save.inventory.snowhead_temple_keys = comData->save.inventory.snowhead_temple_keys + 1;
       break;
     case 2:
-      keys = comData->save.inventory.great_bay_temple_keys < 0 ? 0 : comData->save.inventory.great_bay_temple_keys;
-      comData->save.inventory.great_bay_temple_keys = keys + 1;
+      comData->save.inventory.great_bay_temple_keys = comData->save.inventory.great_bay_temple_keys + 1;
       break;
     case 3:
-      keys = comData->save.inventory.stone_tower_temple_keys < 0 ? 0 : comData->save.inventory.stone_tower_temple_keys;
-      comData->save.inventory.stone_tower_temple_keys = keys + 1;
+      comData->save.inventory.stone_tower_temple_keys = comData->save.inventory.stone_tower_temple_keys + 1;
       break;
     default:
       break;
@@ -186,22 +181,6 @@ namespace rnd {
     }*/
   }
 
-  void ItemEffect_PlaceMagicArrowsInInventory(game::CommonData* comData, s16 arg1, s16 arg2) {
-    if (arg1 == 0) {  // Fairy Bow
-      SaveFile_ResetItemSlotsIfMatchesID((u8)game::ItemId::FireArrow);
-      SaveFile_ResetItemSlotsIfMatchesID((u8)game::ItemId::IceArrow);
-      SaveFile_ResetItemSlotsIfMatchesID((u8)game::ItemId::LightArrow);
-    } else if (game::HasItem(game::ItemId::Arrow)) {
-      if (arg1 == 1 && !game::HasItem(game::ItemId::FireArrow)) {  // Fire Arrow
-        game::GiveItem(game::ItemId::FireArrow);
-      } else if (arg1 == 2 && !game::HasItem(game::ItemId::IceArrow)) {  // Ice Arrow
-        game::GiveItem(game::ItemId::IceArrow);
-      } else if (arg1 == 3 && !game::HasItem(game::ItemId::LightArrow)) {  // Light Arrow
-        game::GiveItem(game::ItemId::LightArrow);
-      }
-    }
-  }
-
   void ItemEffect_GiveUpgrade(game::CommonData* comData, s16 arg1, s16 arg2) {
     // This takes care of the item upgrade in inventory_count_register.
     util::GetPointer<void(u8, u8)>(0x023BF4C)(arg2, arg1);
@@ -225,6 +204,8 @@ namespace rnd {
         comData->save.inventory.items[(u32)game::ItemId::DekuNuts] = game::ItemId::DekuNuts;
         comData->save.inventory.item_counts[14] += 10;
         break;
+      default:
+        break;
       }
     } else {
       switch (arg2) {
@@ -241,6 +222,8 @@ namespace rnd {
       case 7:
         comData->save.inventory.items[(u32)game::ItemId::DekuNuts] = game::ItemId::DekuNuts;
         comData->save.inventory.item_counts[14] = (10 + 10 * arg1);
+        break;
+      default:
         break;
       }
     }
@@ -266,12 +249,18 @@ namespace rnd {
     switch (mask) {
     case 0:
       comData->save.inventory.collect_register.odolwas_remains = 1;
+      break;
     case 1:
       comData->save.inventory.collect_register.gohts_remains = 1;
+      break;
     case 2:
       comData->save.inventory.collect_register.gyorgs_remains = 1;
+      break;
     case 3:
       comData->save.inventory.collect_register.twinmolds_remains = 1;
+      break;
+    default:
+      break;
     }
   }
 
@@ -309,6 +298,8 @@ namespace rnd {
       else if (mask == 3)
         comData->save.inventory.stone_tower_dungeon_items.map = 1;
       break;
+    default:
+      break;
     }
   }
 
@@ -338,6 +329,8 @@ namespace rnd {
       break;
     case 3:
       comData->save.inventory.collect_register.twinmolds_remains = 1;
+      break;
+    default:
       break;
     }
     // Make this call as we need to update field_11 in Sub1 CommonData.

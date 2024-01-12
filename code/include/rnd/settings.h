@@ -91,8 +91,8 @@ namespace rnd {
   };
 
   enum class MapsAndCompassesSetting : u8 {
-    MAPSANDCOMPASSES_START_WITH,
     MAPSANDCOMPASSES_VANILLA,
+    MAPSANDCOMPASSES_START_WITH,
     MAPSANDCOMPASSES_OWN_DUNGEON,
     MAPSANDCOMPASSES_ANY_DUNGEON,
     MAPSANDCOMPASSES_OVERWORLD,
@@ -100,8 +100,8 @@ namespace rnd {
   };
 
   enum class KeysanitySetting : u8 {
-    KEYSANITY_START_WITH,
     KEYSANITY_VANILLA,
+    KEYSANITY_START_WITH,
     KEYSANITY_OWN_DUNGEON,
     KEYSANITY_ANY_DUNGEON,
     KEYSANITY_OVERWORLD,
@@ -109,8 +109,8 @@ namespace rnd {
   };
 
   enum class BossKeysanitySetting : u8 {
-    BOSSKEYSANITY_START_WITH,
     BOSSKEYSANITY_VANILLA,
+    BOSSKEYSANITY_START_WITH,
     BOSSKEYSANITY_OWN_DUNGEON,
     BOSSKEYSANITY_ANY_DUNGEON,
     BOSSKEYSANITY_OVERWORLD,
@@ -156,17 +156,9 @@ namespace rnd {
 
   enum class IceTrapSetting : u8 {
     ICETRAPS_OFF,
-    ICETRAPS_NORMAL,
     ICETRAPS_EXTRA,
     ICETRAPS_MAYHEM,
     ICETRAPS_ONSLAUGHT,
-  };
-
-  enum class RSDURABILITYSetting : u8 {
-    RSDURABILITY_VANILLA,
-    RSDURABILITY_RANDOMRISK,
-    RSDURABILITY_RANDOMSAFE,
-    RSDURABILITY_INF,
   };
 
   enum class StartingBottleSetting : u8 {
@@ -201,16 +193,16 @@ namespace rnd {
   };
 
   enum class StartingSwordSetting : u8 {
-    STARTINGSWORD_NONE,
     STARTINGSWORD_KOKIRI,
     STARTINGSWORD_RAZOR,
     STARTINGSWORD_GILDED,
+    STARTINGSWORD_NONE,
   };
 
   enum class StartingSheildSetting : u8 {
-    STARTINGSHIELD_NONE,
     STARTINGSHIELD_HERO,
     STARTINGSHIELD_MIRROR,
+    STARTINGSHIELD_NONE,
   };
 
   enum class StartingSpinSetting : u8 {
@@ -241,8 +233,22 @@ namespace rnd {
     SHUFFLEKOKIRISWORD_VANILLA,
     SHUFFLEKOKIRISWROD_ANYWHERE,
   };
+
+  typedef enum {
+    DUNGEON_NEITHER,
+    DUNGEON_BARREN,
+    DUNGEON_WOTH,
+  } DungeonInfo;
+
+  typedef enum {
+    PLAY_ON_CONSOLE,
+    PLAY_ON_CITRA,
+  } PlayOption;
+
   typedef struct {
     u8 hashIndexes[5];
+
+    u8 playOption;
 
     u8 logic;
     u8 locationsReachable;
@@ -282,12 +288,11 @@ namespace rnd {
     u8 gossipStoneHints;
     u8 chestAnimations;
     u8 chestSize;
+    u8 compassesShowWotH;
     u8 generateSpoilerLog;
     u8 ingameSpoilers;
     u8 menuOpeningButton;
     u8 randomTrapDmg;
-
-    u8 rsDurability;
 
     u8 itemPoolValue;
     u8 iceTrapValue;
@@ -332,8 +337,6 @@ namespace rnd {
     u8 startingBottle7;
 
     u8 startingKokiriSword;
-    u8 startingRazorSword;
-    u8 startingGildedSword;
     u8 startingShield;
     u8 startingMagicMeter;
     u8 startingDoubleDefense;
@@ -391,10 +394,26 @@ namespace rnd {
     u32 startingUpgrades;
     game::PlayerData::OwlStatues startingOwlStatues;
 
-    // ARM Patch Checks
-    u8 enableFastZoraSwim = 1;
-    u8 enableOcarinaDiving = 1;
-    u8 enableFastElegyStatues = 0;
+    // ARM Patch Checks / Restoration Checks
+    u8 enableFastZoraSwim;
+    u8 enableOcarinaDiving;
+    u8 enableFastElegyStatues;
+    u8 maskOfTruthRequiredForGossip;
+    u8 enableFastMaskTransform;
+    u8 enableFastOcarina;
+    u8 enableFastArrowSwap;
+
+    // Cutscene Skips
+    u8 skipHMSCutscenes;
+    u8 skipMikauCutscene;
+    u8 skipDarmaniCutscene;
+
+    // Custom Buttons
+    u32 customMapButton = 0;
+    u32 customItemButton = 0;
+    u32 customMaskButton = 0;
+    u32 customNotebookButton = 0;
+    u32 customIngameSpoilerButton = 0;
   } SettingsContext;
 
   extern "C" SettingsContext gSettingsContext;

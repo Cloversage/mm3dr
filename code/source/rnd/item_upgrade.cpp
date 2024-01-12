@@ -1,6 +1,5 @@
 #include "rnd/item_upgrade.h"
 #include "rnd/item_override.h"
-#include "rnd/razor_sword.h"
 
 #if defined ENABLE_DEBUG || defined DEBUG_PRINT
 #include "common/debug.h"
@@ -11,7 +10,7 @@ namespace rnd {
   }
 
   GetItemID ItemUpgrade_BombBag(game::SaveData* saveCtx, GetItemID GetItemId) {
-    switch (saveCtx->inventory.inventory_count_register.bomb_bag_upgrade) {
+    switch (saveCtx->inventory.inventory_count_register.bomb_bag_upgrade.Value()) {
     case game::BombBag::NoBag:
       return GetItemID::GI_BOMB_BAG_20;  // Bomb Bag
     case game::BombBag::BombBag20:
@@ -22,7 +21,7 @@ namespace rnd {
   }
 
   GetItemID ItemUpgrade_Quiver(game::SaveData* saveCtx, GetItemID GetItemId) {
-    switch (saveCtx->inventory.inventory_count_register.quiver_upgrade) {
+    switch (saveCtx->inventory.inventory_count_register.quiver_upgrade.Value()) {
     case game::Quiver::NoQuiver:
       return GetItemID::GI_HEROS_BOW;  // Bow
     case game::Quiver::Quiver30:
@@ -33,7 +32,7 @@ namespace rnd {
   }
 
   GetItemID ItemUpgrade_Wallet(game::SaveData* saveCtx, GetItemID GetItemId) {
-    switch (saveCtx->inventory.inventory_count_register.wallet_upgrade) {
+    switch (saveCtx->inventory.inventory_count_register.wallet_upgrade.Value()) {
     case 0:
       return GetItemID::GI_ADULT_WALLET;  // Adult's Wallet
     case 1:
@@ -63,9 +62,8 @@ namespace rnd {
   GetItemID ItemUpgrade_Sword(game::SaveData* saveCtx, GetItemID GetItemId) {
     switch (saveCtx->equipment.sword_shield.sword) {
     case game::SwordType::NoSword:
-      return GetItemID::GI_SWORD_KOKIRI_STOLEN;  // Stolen sword?
+      return GetItemID::GI_KOKIRI_SWORD;  // Stolen sword?
     case game::SwordType::KokiriSword:
-      RS_SetDurability();
       return GetItemID::GI_RAZOR_SWORD;  // Razor sword
     case game::SwordType::RazorSword:
       return GetItemID::GI_GILDED_SWORD;  // Gilded sword
@@ -76,14 +74,14 @@ namespace rnd {
 
   GetItemID ItemUpgrade_ArrowsToRupee(game::SaveData* saveCtx, GetItemID getItemId) {
     return (saveCtx->inventory.inventory_count_register.quiver_upgrade == game::Quiver::NoQuiver) ?
-               getItemId :
-               GetItemID::GI_RUPEE_BLUE;  // Blue Rupee
+               GetItemID::GI_RUPEE_BLUE :  // Blue Rupee
+               getItemId;
   }
 
   GetItemID ItemUpgrade_BombsToRupee(game::SaveData* saveCtx, GetItemID getItemId) {
-    return (saveCtx->inventory.inventory_count_register.bomb_bag_upgrade == game::BombBag::NoBag) ?
-               getItemId :
-               GetItemID::GI_RUPEE_BLUE;  // Blue Rupee
+    return (saveCtx->inventory.inventory_count_register.bomb_bag_upgrade.Value() == game::BombBag::NoBag) ?
+               GetItemID::GI_RUPEE_BLUE :  // Blue Rupee
+               getItemId;
   }
 
   // TODO: Trade quest items.
